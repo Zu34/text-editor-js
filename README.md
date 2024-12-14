@@ -1,7 +1,7 @@
 ## I changed The whole env of code, was checking up  Advantages of Using Async/Await
 
 ### here is a block of js code to download/save files/text
-```
+```JavaScript 
 const handleFileActions = async (action) => {
     const currentFilename = filename.value || 'untitled';
     if (action === 'new') {
