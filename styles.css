@@ -23,9 +23,6 @@ a {
 	cursor: pointer;
 }
 
-
-
-
 .container {
 	max-width: 991px;
 	width: 100%;
@@ -109,9 +106,19 @@ a {
 #content {
 	padding: 100px;
 	outline: none;
-	max-height: 50vh;
+	max-height: 500vh;
 	overflow: auto;
 }
 #show-code[data-active="true"] {
 	background: #eee;
+}
+
+.toolbar .btn-toolbar button.highlight {
+	background: #aac1e6; /* A distinct background color */
+	color: #fff; /* Change icon/text color for better contrast */
+	border-color: #6a89cc; /* Highlight border */
+}
+
+.toolbar .btn-toolbar button.highlight:hover {
+	background: #93b5e6; /* Slightly darker on hover */
 }

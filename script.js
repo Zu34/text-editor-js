@@ -1,118 +1,101 @@
-// Utility functions
-const formatText = async (command, value = null) => {
-    if (command === 'createLink' && value) {
-        document.execCommand('createLink', false, value);
-    } else {
+document.addEventListener('DOMContentLoaded', () => {
+    const content = document.getElementById('content');
+    const filename = document.getElementById('filename');
+    const fileOptions = document.getElementById('file-options');
+    const formatOptions = document.getElementById('format-options');
+    const fontSizeOptions = document.getElementById('font-size-options');
+    const textColor = document.getElementById('text-color');
+    const bgColor = document.getElementById('bg-color');
+    const showCodeButton = document.getElementById('show-code');
+    const addLinkButton = document.getElementById('add-link');
+    const buttons = document.querySelectorAll('.btn-toolbar button');
+
+    
+
+
+    const formatDoc = (command, value = null) => {
         document.execCommand(command, false, value);
-    }
-};
+    };
 
-// Function to handle links
-const addLink = async () => {
-    const url = prompt('Insert URL:');
-    if (url) {
-        await formatText('createLink', url);
-    }
-};
-
-// Event listeners for content area
-const content = document.getElementById('content');
-
-content.addEventListener('mouseenter', async () => {
-    const links = content.querySelectorAll('a');
-    links.forEach(link => {
-        link.addEventListener('mouseenter', () => {
-            content.setAttribute('contenteditable', 'false');
-            link.setAttribute('target', '_blank');
-        });
-
-        link.addEventListener('mouseleave', () => {
-            content.setAttribute('contenteditable', 'true');
-        });
-    });
-});
-
-// Toggle HTML source code view
-const showCodeButton = document.getElementById('show-code');
-let isCodeViewActive = false;
-
-showCodeButton.addEventListener('click', async () => {
-    isCodeViewActive = !isCodeViewActive;
-    showCodeButton.dataset.active = isCodeViewActive;
-
-    if (isCodeViewActive) {
-        content.textContent = content.innerHTML;
-        content.setAttribute('contenteditable', 'false');
-    } else {
-        content.innerHTML = content.textContent;
-        content.setAttribute('contenteditable', 'true');
-    }
-});
-
-// File handling with async/await
-const filenameInput = document.getElementById('filename');
-
-const fileHandle = async (action) => {
-    const filename = filenameInput.value || 'untitled';
-
-    if (action === 'new') {
-        content.innerHTML = '';
-        filenameInput.value = 'untitled';
-    } else if (action === 'txt') {
-        const blob = new Blob([content.innerText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${filename}.txt`;
-        link.click();
-        URL.revokeObjectURL(url); // Clean up the object URL
-    } else if (action === 'pdf') {
-        try {
-            const options = {
-                filename: `${filename}.pdf`,
-                html2canvas: { scale: 2 },
-                jsPDF: { orientation: 'portrait' }
-            };
-            await html2pdf().set(options).from(content).save();
-        } catch (error) {
-            console.error('Error generating PDF:', error);
+    const handleFileActions = (action) => {
+        const currentFilename = filename.value || 'untitled';
+        if (action === 'new') {
+            content.innerHTML = '';
+            filename.value = 'untitled';
+        } else if (action === 'txt') {
+            const blob = new Blob([content.innerText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${currentFilename}.txt`;
+            link.click();
+            URL.revokeObjectURL(url);
+        } else if (action === 'pdf') {
+            html2pdf().set({ filename: `${currentFilename}.pdf` }).from(content).save();
         }
-    }
-};
+    };
 
-// Attach file handling to dropdown
-document.querySelector('.toolbar select').addEventListener('change', async (event) => {
-    await fileHandle(event.target.value);
-});
-
-// Text formatting
-document.querySelectorAll('.toolbar button').forEach(button => {
-    button.addEventListener('click', async () => {
-        const command = button.dataset.command;
-
-        if (command === 'addLink') {
-            await addLink();
+    const addLink = () => {
+        const url = prompt('Insert URL:');
+        if (url) {
+            formatDoc('createLink', url);
         } else {
-            await formatText(command);
+            alert('Invalid URL.');
+        }
+    };
+
+    let isCodeViewActive = false;
+    showCodeButton.addEventListener('click', () => {
+        isCodeViewActive = !isCodeViewActive;
+        if (isCodeViewActive) {
+            content.textContent = content.innerHTML;
+            content.setAttribute('contenteditable', 'false');
+        } else {
+            content.innerHTML = content.textContent;
+            content.setAttribute('contenteditable', 'true');
         }
     });
-});
 
-// Font size and block formatting
-document.querySelectorAll('.toolbar select').forEach(select => {
-    select.addEventListener('change', async () => {
-        const { command, value } = select.dataset;
-        if (command) await formatText(command, value);
+    // File handling
+    fileOptions.addEventListener('change', (e) => {
+        handleFileActions(e.target.value);
+        e.target.selectedIndex = 0;
     });
-});
 
-// Color pickers
-document.querySelectorAll('.color input').forEach(input => {
-    input.addEventListener('input', async () => {
-        const command = input.dataset.command;
-        await formatText(command, input.value);
+    // Formatting options
+    formatOptions.addEventListener('change', (e) => {
+        formatDoc('formatBlock', e.target.value);
+        e.target.selectedIndex = 0;
     });
-    input.addEventListener('blur', () => {
-        input.value = '#000000'; // Reset to default color
+
+    fontSizeOptions.addEventListener('change', (e) => {
+        formatDoc('fontSize', e.target.value);
+        e.target.selectedIndex = 0;
     });
+
+    // Color pickers
+    textColor.addEventListener('input', (e) => {
+        formatDoc('foreColor', e.target.value);
+    });
+
+    bgColor.addEventListener('input', (e) => {
+        formatDoc('hiliteColor', e.target.value);
+    });
+
+    // Toolbar buttons
+    buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const command = button.dataset.command;
+
+            // Apply format
+            if (command) formatDoc(command);
+
+            // Highlight the active button
+            buttons.forEach(btn => btn.classList.remove('highlight')); // Remove highlight from all buttons
+            button.classList.add('highlight'); // Add highlight to the clicked button
+        });
+    });
+
+    // Add link
+    addLinkButton.addEventListener('click', addLink);
 });
