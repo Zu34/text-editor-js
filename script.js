@@ -10,11 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const addLinkButton = document.getElementById('add-link');
     const buttons = document.querySelectorAll('.btn-toolbar button');
 
-    
+    const applyStyle = (style, value = null) => {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
 
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style[style] = value;
 
-    const formatDoc = (command, value = null) => {
-        document.execCommand(command, false, value);
+        // Wrap selected text in the styled span
+        range.surroundContents(span);
     };
 
     const handleFileActions = (action) => {
@@ -38,7 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const addLink = () => {
         const url = prompt('Insert URL:');
         if (url) {
-            formatDoc('createLink', url);
+            applyStyle('textDecoration', 'underline');
+            applyStyle('color', 'blue');
+
+            const selection = window.getSelection();
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const a = document.createElement('a');
+                a.href = url;
+                a.textContent = selection.toString();
+                range.deleteContents();
+                range.insertNode(a);
+            }
         } else {
             alert('Invalid URL.');
         }
@@ -64,35 +80,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Formatting options
     formatOptions.addEventListener('change', (e) => {
-        formatDoc('formatBlock', e.target.value);
+        const tag = e.target.value;
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const element = document.createElement(tag);
+        range.surroundContents(element);
+
         e.target.selectedIndex = 0;
     });
 
     fontSizeOptions.addEventListener('change', (e) => {
-        formatDoc('fontSize', e.target.value);
+        applyStyle('fontSize', `${e.target.value}px`);
         e.target.selectedIndex = 0;
     });
 
-    // Color pickers
+    // Handle colors  
     textColor.addEventListener('input', (e) => {
-        formatDoc('foreColor', e.target.value);
+        applyInlineStyle('color', e.target.value);
     });
-
+    
     bgColor.addEventListener('input', (e) => {
-        formatDoc('hiliteColor', e.target.value);
+        applyInlineStyle('backgroundColor', e.target.value);
     });
-
+    
+    const applyInlineStyle = (style, value) => {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+    
+        const range = selection.getRangeAt(0);
+    
+        if (range.collapsed) {
+            // Handle collapsed selection
+            const placeholderSpan = document.createElement('span');
+            placeholderSpan.style[style] = value;
+            placeholderSpan.textContent = '\u200B'; // Zero-width space
+            range.insertNode(placeholderSpan);
+    
+            // Adjust selection to stay within the placeholder span
+            range.selectNodeContents(placeholderSpan);
+            selection.removeAllRanges();
+            selection.addRange(range);
+    
+            return; // Exit after handling the collapsed selection
+        }
+    
+        const span = document.createElement('span');
+        span.style[style] = value;
+    
+        // Handle text content in range
+        if (range.startContainer === range.endContainer) {
+            // Same container: wrap in a span
+            const text = range.extractContents();
+            span.appendChild(text);
+            range.insertNode(span);
+        } else {
+            // Across multiple nodes: apply styles iteratively
+            const contents = range.cloneContents();
+            const fragments = Array.from(contents.childNodes);
+            range.deleteContents();
+    
+            fragments.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    // Wrap text nodes in a styled span
+                    const styledSpan = span.cloneNode();
+                    styledSpan.textContent = node.textContent;
+                    range.insertNode(styledSpan);
+                    range.setStartAfter(styledSpan);
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    // Recursively apply styles to elements
+                    node.style[style] = value;
+                    range.insertNode(node);
+                    range.setStartAfter(node);
+                }
+            });
+        }
+    };
+    
     // Toolbar buttons
     buttons.forEach((button) => {
         button.addEventListener('click', () => {
             const command = button.dataset.command;
 
-            // Apply format
-            if (command) formatDoc(command);
+            if (command === 'bold') {
+                applyStyle('fontWeight', 'bold');
+            } else if (command === 'italic') {
+                applyStyle('fontStyle', 'italic');
+            } else if (command === 'underline') {
+                applyStyle('textDecoration', 'underline');
+            }
 
             // Highlight the active button
-            buttons.forEach(btn => btn.classList.remove('highlight')); // Remove highlight from all buttons
-            button.classList.add('highlight'); // Add highlight to the clicked button
+            buttons.forEach(btn => btn.classList.remove('highlight'));
+            button.classList.add('highlight');
         });
     });
 
